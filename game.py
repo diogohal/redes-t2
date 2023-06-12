@@ -3,6 +3,7 @@ import getopt
 import sys
 import json
 from random import shuffle
+import os
 
 # ---------- SCRIPT FUNCTIONS ----------
 def getScriptArguments(argv):
@@ -147,6 +148,7 @@ def playSet(game_state, hand, machine):
     valid_choice = False
     play = 0
     
+    os.system('cls' if os.name == 'nt' else 'clear')
     # New turn
     if(game_state["end_turn"] == True):
         game_state["end_turn"] = False
@@ -154,11 +156,13 @@ def playSet(game_state, hand, machine):
     # End turn
     if(game_state["round_passed"] == 1111):
         game_state["turn"] += 1
+        game_state["min_card"] = 0
+        game_state["num_cards"] = 0
         game_state["end_turn"] = True
         game_state["round"] = 0
         game_state["played"] = 0
         game_state["round_passed"] = 0
-    return game_state
+        return game_state
     
     # New round reset
     if(game_state["played"] == 1111):
@@ -166,7 +170,6 @@ def playSet(game_state, hand, machine):
         game_state["played"] = 0
         game_state["round_passed"] = 0
     
-    print(f'Você precisa jogar {game_state["num_cards"]} cartas menores ou igual a {game_state["min_card"]}.')
     while not valid_play:
         printLine()
         print(hand)
@@ -180,12 +183,18 @@ def playSet(game_state, hand, machine):
                     continue
                 
                 for i in range(num_cards):
-                    hand.remove(min_card)
-                    
+                    hand.remove(min_card)                    
+                
                 game_state = updateGameState(game_state, num_cards, min_card, False, machine, game_state["round"])
+              
+                # If the hand is empty, game is over
+                if(len(hand) == 0):
+                    game_state["end_game"] = True              
+                      
                 valid_play = True
         # Next plays
         else:
+            print(f'Você precisa jogar {game_state["num_cards"]} cartas menores ou igual a {game_state["min_card"]}.')
             play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
             while(valid_choice == False):
                 if(play != 1 and play != 2):
@@ -215,6 +224,10 @@ def playSet(game_state, hand, machine):
                     hand.remove(min_card)
                 
                 game_state = updateGameState(game_state, game_state["num_cards"], min_card, False, machine, game_state["round"])
+
+                # If the hand is empty, game is over
+                if(len(hand) == 0):
+                    game_state["end_game"] = True
                 
             elif play == 2:
                 game_state = updateGameState(game_state, game_state["num_cards"], game_state["min_card"], True, machine, game_state["round"])
@@ -239,7 +252,8 @@ if __name__ == "__main__":
         "played": 0,
         "last": 0,
         "dalmuti": 4,
-        "end_turn": False
+        "end_turn": False,
+        "end_game": False
     }
     getScriptArguments(sys.argv)
     
@@ -284,6 +298,7 @@ if __name__ == "__main__":
                 sendMessage(right_socket, send_address, message)
                 message = receiveMessage(left_socket)
                 state = 1
+                hand.sort()
 
                         
             
@@ -296,16 +311,21 @@ if __name__ == "__main__":
                 message = receiveMessage(left_socket)
                 print('mensagem recebida!', message)
                 game_state = message["play"]["game_state"]
-                if(message["destiny"] == machine):
+                if(message["destiny"] == machine and message["play"]["pass_token"] == True):
                     bat = 1
                 else:
                     sendMessage(right_socket, send_address, message)
+                    if(game_state["end_game"] == True):
+                        print(f'Fim de jogo! Computador {message["origin"]} ganhou!')
+                        quit()
             
                 # message = confirmReceive(message, machine)
                 # sendMessage(right_socket, send_address, message)
             else:
                 game_state = playSet(game_state, hand, machine)
-                if(game_state["end_turn"] == True):
+                if(game_state["end_game"] == True):
+                    message = create_message(machine, {"game_state": game_state, "pass_token": False}, 0)
+                elif(game_state["end_turn"] == True):
                     message = create_message(machine, {"game_state": game_state, "pass_token": True}, game_state["last_played"])
                 else:
                     if(machine+1 > machines[0]):
@@ -314,6 +334,6 @@ if __name__ == "__main__":
                         message = create_message(machine, {"game_state": game_state, "pass_token": True}, machine + 1)
                 sendMessage(right_socket, send_address, message)
                 print('mensagem enviada!', message)
-y                bat = 0
+                bat = 0
 
-       
+        
