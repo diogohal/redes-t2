@@ -171,8 +171,65 @@ def verifyPlay(hand, min_card, num_cards):
             return True
     return False
 
+def handleHand(num_cards, min_card, joker, jokerList):
+    
+    global hand
+
+    # Se o jogador não tiver o número de cartas necessários, mas tiver coringas que ajudam a completar a mão
+    if (num_cards > hand.count(min_card)) and num_cards <= (hand.count(min_card) + len(jokerList)):
+        print('Você vai utilizar seu(s) coringa(s) para completar a mão! Deseja continuar?\n')
+        use = int(input('(1)Sim (2) Não\n'))
+        if (use == 2):
+            return False
+        
+        if num_cards < hand.count(min_card) + len(jokerList):
+            for i in range(len(jokerList)):
+                hand.remove(13)
+            for i in range(num_cards - len(jokerList)):
+                hand.remove(min_card)
+        else:
+            hand.remove(13)
+            for i in range(num_cards - 1):
+                hand.remove(min_card)  
+    # Se o jogador tiver o número de cartas necessárias e tiver coringas
+    elif (num_cards < hand.count(min_card) and num_cards <= hand.count(min_card) + len(jokerList) and len(jokerList) > 0):
+        print('Você pode completar a mão com ou sem os coringas, quer utilizar eles?\n')
+        use = int(input('(1)Sim (2) Não\n'))
+
+        if use == 2:
+            for i in range(num_cards):
+                hand.remove(min_card)
+        
+        elif use == 1 and len(jokerList) == 1:
+            hand.remove(13)
+            for i in range(num_cards-1):
+                hand.remove(min_card)
+
+        elif use == 1 and len(jokerList) == 2:
+            print('Você pode usar 1 ou 2 coringas, o que deseja fazer?\n')
+            newUse = input('(1) Usar 1 Coringa (2) Usar 2 Coringas\n')
+            if newUse == 1:
+                hand.remove(13)
+                for i in range(num_cards-1):
+                    hand.remove(min_card)
+            elif newUse == 2:
+                hand.remove(13)
+                hand.remove(13)
+                for i in range(num_cards-2):
+                    hand.remove(min_card)
+    # Se o jogador tiver cartas necessárias para completar a mão e não tiver coringas
+    elif (num_cards < hand.count(min_card) and len(jokerList) == 0):
+        for i in range(num_cards):
+                hand.remove(min_card)
+    
+    return True
+
+
 def playSet(game_state, hand, machine):
     global machines
+
+    joker = filter(lambda x: (x == 13), hand)
+    jokerList = list(joker)
     
     valid_play = False
     valid_choice = False
@@ -207,56 +264,15 @@ def playSet(game_state, hand, machine):
         if (game_state["round"] == 0 and checkDictionaryFalse(game_state["played"])):
                 num_cards = int(input('Escolha o número de cartas que deseja jogar: '))
                 min_card = int(input('Escolha a carta que deseja jogar: '))
-                joker = filter(lambda x: (x == 13), hand)
-                jokerList = list(joker)
-                joker1 = 1 if len(jokerList) == 1 else 0
-                joker2 = 2 if len(jokerList) == 2 else 2
 
                 printLine()
                 
                 if (num_cards > hand.count(min_card) and num_cards > (hand.count(min_card) + len(jokerList))):
                     print('Jogada inválida!')
                     continue
-                # Se o jogador não tiver o número de cartas necessários, mas tiver coringas que ajudam a completar a mão
-                elif (num_cards > hand.count(min_card)) and num_cards <= (hand.count(min_card) + len(jokerList)):
-                    print('Você vai utilizar seu(s) coringa(s) para completar a mão! Deseja continuar?\n')
-                    use = input('(1)Sim (2) Não\n')
-                    if (use == 2):
-                        continue
-                    
-                    if num_cards < hand.count(min_card) + len(jokerList):
-                        for i in range(jokerList):
-                            hand.remove(13)
-                        for i in (range(num_cards) - range(jokerList)):
-                            hand.remove(min_card)
-                    else:
-                        hand.remove(13)
-                        for i in (range(num_cards) - 1):
-                            hand.remove(min_card)  
-                # Se o jogador tiver o número de cartas necessárias e tiver coringas
-                elif (num_cards < hand.count(min_card) and num_cards <= hand.count(min_card) + len(jokerList)):
-                    print('Você pode completar a mão com ou sem os coringas, quer utilizar eles?\n')
-                    use = input('(1)Sim (2) Não\n')
-                    
-                    if use == 2:
-                        for i in range(num_cards):
-                            hand.remove(min_card)
-                    elif use == 1 and len(jokerList) == 2:
-                        print('Você pode usar 1 ou 2 coringas, o que deseja fazer?\n')
-                        newUse = input('(1) Usar 1 Coringa (2) Usar 2 Coringas\n')
-                        if newUse == 1:
-                            hand.remove(13)
-                            for i in (range(num_cards) - 1):
-                                hand.remove(min_card)
-                        elif newUse == 2:
-                            hand.remove(13)
-                            hand.remove(13)
-                            for i in (range(num_cards) - 2):
-                                hand.remove(min_card)
-                # Se o jogador tiver cartas necessárias para completar a mão e não tiver coringas
-                elif (num_cards < hand.count(min_card) and len(jokerList) == 0):
-                    for i in range(num_cards):
-                            hand.remove(min_card)
+
+                if (not handleHand(num_cards, min_card, joker, jokerList)):
+                    continue
                 
                 game_state = updateGameState(game_state, num_cards, min_card, False, machine, game_state["round"])
               
@@ -284,7 +300,7 @@ def playSet(game_state, hand, machine):
                 printLine()
                 print(hand.count(min_card))
                 while valid_play == False:
-                    if(hand.count(min_card) < game_state["num_cards"]):
+                    if(hand.count(min_card) + len(jokerList) < game_state["num_cards"]):
                         print(f'Jogada inválida! Você precisa jogar um conjunto de {game_state["num_cards"]} cartas.')
                     elif(min_card > game_state["min_card"]):
                         print(f'Jogada inválida! A carta tem que ser menor que {game_state["min_card"]}.')
@@ -293,8 +309,10 @@ def playSet(game_state, hand, machine):
                         continue
                     min_card = int(input('Escolha a carta que deseja jogar: '))
                 
-                for i in range(game_state["num_cards"]):
-                    hand.remove(min_card)
+                if (handleHand(game_state["num_cards"], min_card, joker, jokerList) == False):
+                    print(f'Você precisa de coringas para completar o conjunto da carta {min_card}')
+                    valid_play = False
+                    continue
                 
                 game_state = updateGameState(game_state, game_state["num_cards"], min_card, False, machine, game_state["round"])
 
