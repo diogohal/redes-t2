@@ -192,7 +192,7 @@ def handleHand(num_cards, min_card, joker, jokerList):
             for i in range(num_cards - 1):
                 hand.remove(min_card)  
     # Se o jogador tiver o número de cartas necessárias e tiver coringas
-    elif (num_cards < hand.count(min_card) and num_cards <= hand.count(min_card) + len(jokerList) and len(jokerList) > 0):
+    elif (num_cards <= hand.count(min_card) and num_cards <= hand.count(min_card) + len(jokerList) and len(jokerList) > 0):
         print('Você pode completar a mão com ou sem os coringas, quer utilizar eles?\n')
         use = int(input('(1)Sim (2) Não\n'))
 
@@ -218,7 +218,7 @@ def handleHand(num_cards, min_card, joker, jokerList):
                 for i in range(num_cards-2):
                     hand.remove(min_card)
     # Se o jogador tiver cartas necessárias para completar a mão e não tiver coringas
-    elif (num_cards < hand.count(min_card) and len(jokerList) == 0):
+    elif (num_cards <= hand.count(min_card) and len(jokerList) == 0):
         for i in range(num_cards):
                 hand.remove(min_card)
     
