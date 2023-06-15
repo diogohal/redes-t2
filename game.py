@@ -177,8 +177,17 @@ def handleHand(num_cards, min_card, joker, jokerList):
 
     # Se o jogador não tiver o número de cartas necessários, mas tiver coringas que ajudam a completar a mão
     if (num_cards > hand.count(min_card)) and num_cards <= (hand.count(min_card) + len(jokerList)):
-        print('Você vai utilizar seu(s) coringa(s) para completar a mão! Deseja continuar?\n')
-        use = int(input('(1)Sim (2) Não\n'))
+        loop = 1
+        while(loop == 1):
+            try:
+                print('Você vai utilizar seu(s) coringa(s) para completar a mão! Deseja continuar?\n')
+                use = int(input('(1)Sim (2) Não\n'))
+                loop = 0
+            except KeyboardInterrupt:
+                exit()
+            except:
+                print('Entrada Incorreta! Coloque uma opção válida!')
+
         if (use == 2):
             return False
         
@@ -193,8 +202,16 @@ def handleHand(num_cards, min_card, joker, jokerList):
                 hand.remove(min_card)  
     # Se o jogador tiver o número de cartas necessárias e tiver coringas
     elif (num_cards <= hand.count(min_card) and num_cards <= hand.count(min_card) + len(jokerList) and len(jokerList) > 0):
-        print('Você pode completar a mão com ou sem os coringas, quer utilizar eles?\n')
-        use = int(input('(1)Sim (2) Não\n'))
+        loop = 1
+        while(loop == 1):
+            try:
+                print('Você pode completar a mão com ou sem os coringas, quer utilizar eles?\n')
+                use = int(input('(1)Sim (2) Não\n'))
+                loop = 0
+            except KeyboardInterrupt:
+                exit()
+            except:
+                print('Entrada Incorreta! Coloque uma opção válida!')
 
         if use == 2:
             for i in range(num_cards):
@@ -206,8 +223,17 @@ def handleHand(num_cards, min_card, joker, jokerList):
                 hand.remove(min_card)
 
         elif use == 1 and len(jokerList) == 2:
-            print('Você pode usar 1 ou 2 coringas, o que deseja fazer?\n')
-            newUse = input('(1) Usar 1 Coringa (2) Usar 2 Coringas\n')
+            loop = 1
+            while(loop == 1):
+                try:
+                    print('Você pode usar 1 ou 2 coringas, o que deseja fazer?\n')
+                    newUse = int(input('(1) Usar 1 Coringa (2) Usar 2 Coringas\n'))
+                    loop = 0
+                except KeyboardInterrupt:
+                    exit()
+                except:
+                    print('Entrada Incorreta! Coloque uma opção válida!')
+
             if newUse == 1:
                 hand.remove(13)
                 for i in range(num_cards-1):
@@ -262,29 +288,46 @@ def playSet(game_state, hand, machine):
         print(hand)
         # First play
         if (game_state["round"] == 0 and checkDictionaryFalse(game_state["played"])):
-                num_cards = int(input('Escolha o número de cartas que deseja jogar: '))
-                min_card = int(input('Escolha a carta que deseja jogar: '))
+            loop = 1
+            while(loop == 1):
+                try:
+                    num_cards = int(input('Escolha o número de cartas que deseja jogar: '))
+                    min_card = int(input('Escolha a carta que deseja jogar: '))
+                    loop = 0
+                except KeyboardInterrupt:
+                    exit()
+                except:
+                    print('Entrada Incorreta! Coloque uma opção válida!')
 
-                printLine()
-                
-                if (num_cards > hand.count(min_card) and num_cards > (hand.count(min_card) + len(jokerList))):
-                    print('Jogada inválida!')
-                    continue
+            printLine()
+            
+            if (num_cards > hand.count(min_card) and num_cards > (hand.count(min_card) + len(jokerList))):
+                print('Jogada inválida!')
+                continue
 
-                if (not handleHand(num_cards, min_card, joker, jokerList)):
-                    continue
-                
-                game_state = updateGameState(game_state, num_cards, min_card, False, machine, game_state["round"])
-              
-                # If the hand is empty, game is over
-                if(len(hand) == 0):
-                    game_state["end_game"] = True              
-                      
-                valid_play = True
+            if (not handleHand(num_cards, min_card, joker, jokerList)):
+                continue
+            
+            game_state = updateGameState(game_state, num_cards, min_card, False, machine, game_state["round"])
+            
+            # If the hand is empty, game is over
+            if(len(hand) == 0):
+                game_state["end_game"] = True              
+                    
+            valid_play = True
         # Next plays
         else:
-            print(f'Você precisa jogar {game_state["num_cards"]} cartas menores ou igual a {game_state["min_card"]}.')
-            play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
+            loop = 1
+            while(loop == 1):
+                try:
+                    print(f'Você precisa jogar {game_state["num_cards"]} cartas menores ou igual a {game_state["min_card"]}.')
+                    play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
+                    loop = 0
+                except KeyboardInterrupt:
+                    exit()
+                except:
+                    print('Entrada Incorreta! Coloque uma opção válida!')
+
             while(valid_choice == False):
                 if(play != 1 and play != 2):
                     print('Escolha uma opção válida!')
@@ -293,10 +336,27 @@ def playSet(game_state, hand, machine):
                 else:
                     valid_choice = True
                     continue
-                play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
+                loop = 1
+                while(loop == 1):
+                    try:
+                        play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
+                        loop = 0
+                    except KeyboardInterrupt:
+                        exit()
+                    except:
+                        print('Entrada Incorreta! Coloque uma opção válida!')
             
             if play == 1:
-                min_card = int(input('Escolha a carta que deseja jogar: '))
+                loop = 1
+                while(loop == 1):
+                    try:
+                        min_card = int(input('Escolha a carta que deseja jogar: '))
+                        loop = 0
+                    except KeyboardInterrupt:
+                        exit()
+                    except:
+                        print('Entrada Incorreta! Coloque uma opção válida!')
+
                 printLine()
                 print(hand.count(min_card))
                 while valid_play == False:
@@ -307,8 +367,16 @@ def playSet(game_state, hand, machine):
                     else:
                         valid_play = True
                         continue
-                    min_card = int(input('Escolha a carta que deseja jogar: '))
-                
+                    
+                    loop = 1
+                    while(loop == 1):
+                        try:
+                            min_card = int(input('Escolha a carta que deseja jogar: '))
+                            loop = 0
+                        except KeyboardInterrupt:
+                            exit()
+                        except:
+                            print('Entrada Incorreta! Coloque uma opção válida!')
                 if (handleHand(game_state["num_cards"], min_card, joker, jokerList) == False):
                     print(f'Você precisa de coringas para completar o conjunto da carta {min_card}')
                     valid_play = False
@@ -350,7 +418,7 @@ if __name__ == "__main__":
     getScriptArguments(sys.argv)
             
     machines = readConfigure()
-    
+
     # Deal setup
     if(machine == machines[0]):
         bat = 1
