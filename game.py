@@ -42,6 +42,10 @@ def readConfigure():
 
         machine_info = [host, port_send, port_receive]
         machines.append(machine_info)
+        
+    if(machines[0] != len(machines)-1):
+        print('Número de máquinas diferente da quantidade de máquinas configuradas!')
+        quit()
 
     return machines
 
@@ -535,6 +539,8 @@ if __name__ == "__main__":
                 while(deck != []):
                     hand.append(deck.pop())
                     for i in range(1, machines[0]):
+                        if(deck == []):
+                            continue
                         card = deck.pop()
                         message = create_message(machine, {"empty_deck": 0, "deal_card": card}, i, machines[0])
                         # Wait for the message get back
