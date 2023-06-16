@@ -185,7 +185,6 @@ def updateGameState(game_state, num_cards, min_card, passed, machine, rnd):
     else:
         game_state["last_played"] = machine
     game_state["played"][f"machine{machine}"] = True
-    
     game_state["round"] = rnd
     return game_state
 
@@ -287,8 +286,8 @@ def playSet(game_state, hand, machine):
     """ Player's move
     """
     
-    printGameState(game_state, hand)
     global machines
+    printGameState(game_state, hand)
 
     # Important variables
     joker = filter(lambda x: (x == 13), hand)
@@ -315,7 +314,6 @@ def playSet(game_state, hand, machine):
     
     # Round reset when everyone has played
     if(checkDictionaryTrue(game_state["played"])):
-        game_state["round"] += 1
         initializeDicionary(game_state["played"], machines[0])
         initializeDicionary(game_state["round_passed"], machines[0])
     
@@ -445,24 +443,38 @@ def playSet(game_state, hand, machine):
                 game_state = updateGameState(game_state, game_state["num_cards"], game_state["min_card"], True, machine, game_state["round"])
                 valid_play = True
 
+    # 
+    if(checkDictionaryTrue(game_state["played"])):
+      game_state["round"] += 1
+    
     return game_state
 
 def printGameState(game_state, hand):
+    """ Print the game status
+    """
+    global machines
     print('------------------------------------')
     print('----------O GRANDE DALMUTI----------')
     print('------------------------------------')
     print(f'Dalmuti: machine{game_state["dalmuti"]}')
-    print(f'Rodada: {game_state["round"]}')
-    print(f'Turno: {game_state["turn"]}')
-    print(f'Última carta: {game_state["min_card"]}')
-    print(f'Número de cartas: {game_state["num_cards"]}')
-    print(f'Último carta jogada pelo jogador: machine{game_state["last_played"]}')
+    print(f'Rodada (voltas na mesa): {game_state["round"]}')
+    print(f'Turno (todos player passaram a vez): {game_state["turn"]}')
+    if(game_state["min_card"] == 0):
+        print(f'Última carta: nenhuma jogada realizada!')
+        print(f'Número de cartas: nenhuma jogada realizada!')
+        print(f'Último carta jogada pelo jogador: nenhuma jogada realizada!')
+    else:
+        print(f'Última carta: {game_state["min_card"]}')
+        print(f'Número de cartas: {game_state["num_cards"]}')
+        print(f'Último carta jogada pelo jogador: machine{game_state["last_played"]}')
+    
     print(f'Cartas na mão: {hand}')
     
 # ---------- MAIN PROGRAM ----------
 if __name__ == "__main__":
     state = 0
     machine = 0
+    first_play = 1
     bat = 0
     hand = []
     deck = []
@@ -487,6 +499,10 @@ if __name__ == "__main__":
     if(machine == machines[0]):
         bat = 1
         deck = createDeck()
+        
+    # First play of the dalmuti print game_state correction
+    if(machine == 1):
+        first_play = 0
 
     initializeDicionary(game_state["round_passed"], machines[0])
     initializeDicionary(game_state["played"], machines[0])
@@ -543,6 +559,10 @@ if __name__ == "__main__":
         elif(state == 1):                   
             # If the player doesn't have the bat, it waits for the next message
             if(bat == 0):
+                if(first_play == 1):
+                    printGameState(game_state, hand)
+                    first_play = 0
+                    
                 message = receiveMessage(left_socket)
                 os.system('cls' if os.name == 'nt' else 'clear')
                 game_state = message["play"]["game_state"]
@@ -570,7 +590,12 @@ if __name__ == "__main__":
                 while(confirmAllReceive(machines[0], message) == False):
                     sendMessage(right_socket, send_address, message)
                     message = receiveMessage(left_socket)        
-            
+
+                # If the machine wins            
+                if(game_state["end_game"] == True):
+                    print(f'Fim de jogo! Computador {message["origin"]} ganhou!')
+                    quit() 
+
                 # If the turn is over, pass the bat to the next dalmuti
                 if(game_state["end_turn"] == True):
                     message = create_message(machine, {"game_state": game_state, "pass_token": True}, game_state["last_played"], machines[0])
