@@ -81,7 +81,7 @@ def closeSockets(socket_left, socket_right):
     socket_right.close()
 
 # ---------- MESSAGE FUNCTIONS ----------
-def create_message(machine, play, destiny):
+def create_message(machine, play, destiny, num_machines):
     """ Create a message to send in the wing network
     """
     message = {
@@ -89,10 +89,21 @@ def create_message(machine, play, destiny):
         "origin": machine,
         "destiny": destiny,
         "play": play,
-        "receive": {f"machine{machine}": True},
+        "receive": {},
         "end_mark": 127        
     }
+    for i in range(1, num_machines+1):
+        message["receive"][f"machine{i}"] = False
+    message["receive"][f"machine{machine}"] = True
     return message
+
+def confirmAllReceive(num_machines, message):
+    """ Confirm if all the machines receive the message
+    """
+    for i in range(1, num_machines+1):
+        if(message["receive"][f"machine{i}"] == False):
+            return False
+    return True
 
 def confirmReceive(message, machine):
     """ Confirm a message from wing network
@@ -174,6 +185,7 @@ def updateGameState(game_state, num_cards, min_card, passed, machine, rnd):
     else:
         game_state["last_played"] = machine
     game_state["played"][f"machine{machine}"] = True
+    
     game_state["round"] = rnd
     return game_state
 
@@ -271,10 +283,11 @@ def handleHand(num_cards, min_card, joker, jokerList):
     
     return True
 
-
 def playSet(game_state, hand, machine):
     """ Player's move
     """
+    
+    printGameState(game_state, hand)
     global machines
 
     # Important variables
@@ -283,9 +296,7 @@ def playSet(game_state, hand, machine):
     valid_play = False
     valid_choice = False
     play = 0
-    
-    os.system('cls' if os.name == 'nt' else 'clear')
-    
+        
     # If it's a new turn, change the game state
     if(game_state["end_turn"] == True):
         game_state["end_turn"] = False
@@ -297,6 +308,7 @@ def playSet(game_state, hand, machine):
         game_state["num_cards"] = 0
         game_state["end_turn"] = True
         game_state["round"] = 0
+        game_state["dalmuti"] = game_state["last_played"]
         initializeDicionary(game_state["round_passed"], machines[0])
         initializeDicionary(game_state["played"], machines[0])
         return game_state
@@ -310,8 +322,6 @@ def playSet(game_state, hand, machine):
     # Player's move
     while not valid_play:
         printLine()
-        print(hand)
-        
         # ---------- First play of the round ----------
         if (game_state["round"] == 0 and checkDictionaryFalse(game_state["played"])):
             loop = 1
@@ -352,7 +362,6 @@ def playSet(game_state, hand, machine):
             # Choose the move: play a card or pass
             while(loop == 1):
                 try:
-                    print(f'Você precisa jogar {game_state["num_cards"]} cartas menores ou igual a {game_state["min_card"]}.')
                     play = int(input('(1) Jogar uma carta\n(2) Passar a vez\nEscolha sua jogada: '))
                     loop = 0
                 except KeyboardInterrupt:
@@ -438,6 +447,18 @@ def playSet(game_state, hand, machine):
 
     return game_state
 
+def printGameState(game_state, hand):
+    print('------------------------------------')
+    print('----------O GRANDE DALMUTI----------')
+    print('------------------------------------')
+    print(f'Dalmuti: machine{game_state["dalmuti"]}')
+    print(f'Rodada: {game_state["round"]}')
+    print(f'Turno: {game_state["turn"]}')
+    print(f'Última carta: {game_state["min_card"]}')
+    print(f'Número de cartas: {game_state["num_cards"]}')
+    print(f'Último carta jogada pelo jogador: machine{game_state["last_played"]}')
+    print(f'Cartas na mão: {hand}')
+    
 # ---------- MAIN PROGRAM ----------
 if __name__ == "__main__":
     state = 0
@@ -452,8 +473,8 @@ if __name__ == "__main__":
         "round": 0,
         "round_passed": {},
         "played": {},
-        "last": 0,
-        "dalmuti": 0,
+        "last_played": 0,
+        "dalmuti": 1,
         "end_turn": False,
         "end_game": False
     }
@@ -465,7 +486,6 @@ if __name__ == "__main__":
     # Deal setup and Dalmuti setup
     if(machine == machines[0]):
         bat = 1
-        game_state["dalmuti"] = machine
         deck = createDeck()
 
     initializeDicionary(game_state["round_passed"], machines[0])
@@ -483,7 +503,7 @@ if __name__ == "__main__":
         # ---------- Setup state ---------- 
         if(state == 0):
             # Other players wait for card distribution
-            if (machine != game_state["dalmuti"]):
+            if (machine != machines[0]):
                 message = receiveMessage(left_socket)
                 if(message["destiny"] == machine or message["destiny"] == 0):
                     if(message["play"]["empty_deck"] == 1):
@@ -495,19 +515,27 @@ if __name__ == "__main__":
                 sendMessage(right_socket, send_address, message)          
             
             # The deal distribute cards for other players
-            elif(machine == game_state["dalmuti"]):
+            elif(machine == machines[0]):
                 while(deck != []):
                     hand.append(deck.pop())
                     for i in range(1, machines[0]):
                         card = deck.pop()
-                        message = create_message(machine, {"empty_deck": 0, "deal_card": card}, i)
-                        sendMessage(right_socket, send_address, message)
-                        message = receiveMessage(left_socket)
-                
+                        message = create_message(machine, {"empty_deck": 0, "deal_card": card}, i, machines[0])
+                        # Wait for the message get back
+                        while(confirmAllReceive(machines[0], message) == False):
+                            sendMessage(right_socket, send_address, message)
+                            message = receiveMessage(left_socket)
+                                            
                 # Send cards distribution finished to everyone
-                message = create_message(machine, {"empty_deck": 1}, 0) # send to everyone
+                message = create_message(machine, {"empty_deck": 1}, 0, machines[0]) # send to everyone
+                while(confirmAllReceive(machines[0], message) == False):
+                    sendMessage(right_socket, send_address, message)
+                    message = receiveMessage(left_socket)
+                
+                # Pass the token to dalmuti
+                message = create_message(machine, {"game_state": game_state, "pass_token": True}, 1, machines[0])
                 sendMessage(right_socket, send_address, message)
-                message = receiveMessage(left_socket)
+                bat = 0
                 state = 1
                 hand.sort()
                 
@@ -516,12 +544,16 @@ if __name__ == "__main__":
             # If the player doesn't have the bat, it waits for the next message
             if(bat == 0):
                 message = receiveMessage(left_socket)
+                os.system('cls' if os.name == 'nt' else 'clear')
                 game_state = message["play"]["game_state"]
                 # If the bat is passed to the machine, continue
                 if(message["destiny"] == machine and message["play"]["pass_token"] == True):
                     bat = 1
+                    continue
                 # If the bat is not passed to the machine OR de destiny is not the machine, send it to right
                 else:
+                    printGameState(game_state, hand)
+                    message = confirmReceive(message, machine)
                     sendMessage(right_socket, send_address, message)
                     if(game_state["end_game"] == True):
                         print(f'Fim de jogo! Computador {message["origin"]} ganhou!')
@@ -531,18 +563,24 @@ if __name__ == "__main__":
             else:
                 # Player move
                 game_state = playSet(game_state, hand, machine)
-                # If the game is over, send a message to everyone
-                if(game_state["end_game"] == True):
-                    message = create_message(machine, {"game_state": game_state, "pass_token": False}, 0)
+                os.system('cls' if os.name == 'nt' else 'clear')
+                printGameState(game_state, hand)
+                # Send the new game_state to everyone 
+                message = create_message(machine, {"game_state": game_state, "pass_token": False}, 0, machines[0])
+                while(confirmAllReceive(machines[0], message) == False):
+                    sendMessage(right_socket, send_address, message)
+                    message = receiveMessage(left_socket)        
+            
                 # If the turn is over, pass the bat to the next dalmuti
-                elif(game_state["end_turn"] == True):
-                    message = create_message(machine, {"game_state": game_state, "pass_token": True}, game_state["last_played"])
+                if(game_state["end_turn"] == True):
+                    message = create_message(machine, {"game_state": game_state, "pass_token": True}, game_state["last_played"], machines[0])
+               
                 # Else, pass the bat to the next machine in the wing network
                 else:
                     if(machine+1 > machines[0]):
-                        message = create_message(machine, {"game_state": game_state, "pass_token": True}, 1)
+                        message = create_message(machine, {"game_state": game_state, "pass_token": True}, 1, machines[0])
                     else:
-                        message = create_message(machine, {"game_state": game_state, "pass_token": True}, machine + 1)
+                        message = create_message(machine, {"game_state": game_state, "pass_token": True}, machine + 1, machines[0])
                 sendMessage(right_socket, send_address, message)
                 bat = 0
 
